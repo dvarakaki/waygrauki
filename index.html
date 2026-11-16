@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Quiz de treino de CI/CD e Kubernetes: timer, pontos por velocidade, power-ups, ranking e revisão das erradas.">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Quiz CI/CD e Kubernetes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Lexend:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: sala de jogo de tela única — barra de status, pergunta grande, 4 blocos coloridos de resposta, painel de feedback. */
+:root {
+  color-scheme: dark;
+  --bg: #12102a;
+  --bg-dot: #1f1b45;
+  --panel: #221e4b;
+  --panel-2: #2c2760;
+  --line: #3b3578;
+  --fg: #f5f3ff;
+  --muted: #aaa4d8;
+  --accent: #8f80ff;
+  --accent-fg: #12102a;
+  --good: #2ed082;
+  --bad: #ff5d6c;
+  --warn: #ffb547;
+  --t1: #2f6fed; --t1-fg: #ffffff;
+  --t2: #0e9f88; --t2-fg: #ffffff;
+  --t3: #f2b632; --t3-fg: #241900;
+  --t4: #e5484d; --t4-fg: #ffffff;
+  --font-d: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-b: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --font-m: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --r: 16px;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--bg-dot) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  color: var(--fg);
+  font-family: var(--font-b);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.wrap {
+  max-width: 1000px; margin: 0 auto;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px;
+}
+h1, h2, h3 { font-family: var(--font-d); text-wrap: balance; margin: 0; line-height: 1.1; }
+code {
+  font-family: var(--font-m); font-size: .88em;
+  background: rgba(0,0,0,.28); padding: .1em .4em; border-radius: 6px;
+  word-break: break-word;
+}
+button { font-family: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+.label { font-size: .74rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.btn {
+  border: 0; border-radius: 12px; padding: 14px 22px; font-weight: 700; font-size: 1rem;
+  background: var(--accent); color: var(--accent-fg);
+  box-shadow: 0 4px 0 rgba(0,0,0,.35);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.btn.ghost { background: var(--panel-2); color: var(--fg); }
+.btn.big { font-size: 1.15rem; padding: 16px 34px; }
+
+/* ---------- Início ---------- */
+.start { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; align-items: start; }
+.hero {
+  background: var(--panel); border-radius: var(--r); padding: 28px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.hero h1 { font-size: clamp(2rem, 5vw, 3.1rem); font-weight: 800; letter-spacing: -.02em; }
+.hero h1 span { color: var(--accent); }
+.hero p { margin: 0; color: var(--muted); max-width: 46ch; }
+.swatches { display: flex; gap: 8px; }
+.swatches i { width: 34px; height: 34px; border-radius: 9px; display: block; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.facts span { background: var(--panel-2); border-radius: 999px; padding: 6px 12px; font-size: .85rem; }
+.settings {
+  background: var(--panel); border-radius: var(--r); padding: 24px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.field { display: flex; flex-direction: column; gap: 8px; }
+.seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg button {
+  border: 2px solid var(--line); background: transparent; border-radius: 10px;
+  padding: 9px 14px; font-weight: 600; font-size: .92rem;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.seg small { font-weight: 500; opacity: .75; }
+input[type="text"] {
+  background: var(--bg); border: 2px solid var(--line); border-radius: 10px; color: var(--fg);
+  font: inherit; padding: 11px 14px; width: 100%;
+}
+.best { font-size: .9rem; color: var(--muted); }
+.best b { color: var(--fg); font-variant-numeric: tabular-nums; }
+
+/* ---------- Jogo ---------- */
+.hud { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.hud-left, .hud-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill {
+  background: var(--panel); border-radius: 999px; padding: 7px 14px;
+  font-weight: 600; font-size: .9rem; font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.pill.score { background: var(--fg); color: var(--bg); }
+.pill.streak[data-on="true"] { background: var(--warn); color: #2a1900; }
+.pill.timer { min-width: 72px; justify-content: center; font-size: 1rem; }
+.pill.timer.low { background: var(--bad); color: #fff; }
+.bar { height: 8px; border-radius: 99px; background: var(--panel); overflow: hidden; }
+.bar > div { height: 100%; width: 100%; background: var(--accent); border-radius: 99px; transition: width .1s linear; }
+.bar.low > div { background: var(--bad); }
+.qcard {
+  background: var(--panel); border-radius: var(--r); padding: clamp(22px, 4vw, 40px);
+  min-height: 170px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;
+  text-align: center;
+}
+.qcard h2 { font-family: var(--font-b); font-weight: 600; font-size: clamp(1.2rem, 2.8vw, 1.75rem); line-height: 1.35; max-width: 34ch; }
+.powers { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.power {
+  border: 2px dashed var(--line); background: transparent; border-radius: 999px;
+  padding: 8px 14px; font-weight: 600; font-size: .88rem; display: inline-flex; gap: 6px; align-items: center;
+}
+.power b { font-family: var(--font-d); }
+.power:disabled { opacity: .3; cursor: not-allowed; text-decoration: line-through; }
+.power.active { border-style: solid; border-color: var(--warn); color: var(--warn); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tile {
+  border: 0; border-radius: var(--r); padding: 20px 18px 20px 54px; min-height: 118px;
+  text-align: left; font-size: 1.05rem; font-weight: 600; line-height: 1.35;
+  position: relative; display: flex; align-items: center;
+  box-shadow: 0 6px 0 rgba(0,0,0,.35);
+  transition: transform .1s ease, opacity .2s ease, box-shadow .1s ease;
+  min-width: 0;
+}
+.tile:hover:not(:disabled) { transform: translateY(-2px); }
+.tile:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.35); }
+.tile .key {
+  position: absolute; left: 14px; top: 14px; width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(0,0,0,.22); display: grid; place-items: center; font-size: .85rem; font-weight: 700;
+}
+.tile code { background: rgba(0,0,0,.25); }
+.tile.c1 { background: var(--t1); color: var(--t1-fg); }
+.tile.c2 { background: var(--t2); color: var(--t2-fg); }
+.tile.c3 { background: var(--t3); color: var(--t3-fg); }
+.tile.c4 { background: var(--t4); color: var(--t4-fg); }
+.tile:disabled { cursor: default; }
+.tile.gone { opacity: .12; }
+.tile.dim { opacity: .32; }
+.tile.right { outline: 4px solid var(--good); outline-offset: 3px; }
+.tile.wrong { outline: 4px solid var(--fg); outline-offset: 3px; }
+.tile .tag {
+  position: absolute; right: 10px; top: 10px; font-size: .7rem; letter-spacing: .06em; text-transform: uppercase;
+  background: var(--bg); color: var(--fg); padding: 3px 8px; border-radius: 6px; font-weight: 700;
+}
+.tile.right .tag { background: var(--good); color: #062a17; }
+.feedback {
+  background: var(--panel); border-radius: var(--r); padding: 22px;
+  display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center;
+  animation: rise .25s ease-out;
+}
+.feedback h3 { font-size: 1.5rem; }
+.feedback h3.ok { color: var(--good); }
+.feedback h3.no { color: var(--bad); }
+.feedback .pts { font-family: var(--font-d); font-weight: 800; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.feedback p { margin: 6px 0 0; color: var(--muted); max-width: 68ch; }
+.feedback p strong { color: var(--fg); }
+.feedback .meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.fb-text { min-width: 0; }
+@keyframes rise { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
+.tile.right { animation: pop .35s ease-out; }
+
+/* ---------- Resultado ---------- */
+.end { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.box { background: var(--panel); border-radius: var(--r); padding: 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.final-score { font-family: var(--font-d); font-weight: 800; font-size: clamp(2.6rem, 7vw, 4rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.stat { background: var(--panel-2); border-radius: 12px; padding: 12px 14px; }
+.stat b { display: block; font-family: var(--font-d); font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.board li {
+  display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px;
+  background: var(--panel-2); border-radius: 12px; padding: 10px 14px; font-variant-numeric: tabular-nums;
+}
+.board li.me { background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.board .pos { font-family: var(--font-d); font-weight: 800; font-size: 1.1rem; }
+.board .bot { font-size: .75rem; opacity: .7; margin-left: 6px; }
+.topicbar { display: flex; flex-direction: column; gap: 6px; }
+.topicbar .row { display: flex; justify-content: space-between; font-size: .92rem; }
+.verdict { margin: 0; color: var(--muted); }
+.review { grid-column: 1 / -1; }
+.review ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.review li { background: var(--panel-2); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.review .q { font-weight: 600; }
+.review .ans { font-size: .92rem; }
+.review .ans .x { color: var(--bad); font-weight: 600; }
+.review .ans .v { color: var(--good); font-weight: 600; }
+.review .why { font-size: .9rem; color: var(--muted); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .start, .end { grid-template-columns: 1fr; }
+  .feedback { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .tiles { grid-template-columns: 1fr; }
+  .tile { min-height: 76px; font-size: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- INÍCIO -->
+  <section id="screen-start" class="start">
+    <div class="hero">
+      <div class="swatches" aria-hidden="true"><i style="background:var(--t1)"></i><i style="background:var(--t2)"></i><i style="background:var(--t3)"></i><i style="background:var(--t4)"></i></div>
+      <span class="label">Sala de treino para a prova</span>
+      <h1>CI/CD &amp; <span>Kubernetes</span></h1>
+      <p>Responda rápido: quanto menos tempo você leva, mais pontos ganha. Acertos seguidos dão bônus de sequência, e você disputa o ranking com quatro bots da sala.</p>
+      <div class="facts" id="facts"></div>
+      <div class="best" id="best"></div>
+    </div>
+
+    <div class="settings">
+      <div class="field">
+        <label class="label" for="name">Seu nome no ranking</label>
+        <input type="text" id="name" maxlength="18" autocomplete="off" placeholder="Você">
+      </div>
+      <div class="field">
+        <span class="label">Assunto</span>
+        <div class="seg" data-group="topic">
+          <button data-v="mix">Misturado <small id="n-mix"></small></button>
+          <button data-v="ci">CI/CD <small id="n-ci"></small></button>
+          <button data-v="k8s">Kubernetes <small id="n-k8s"></small></button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Perguntas</span>
+        <div class="seg" data-group="count">
+          <button data-v="10">10</button>
+          <button data-v="20">20</button>
+          <button data-v="30">30</button>
+          <button data-v="0">Todas</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Tempo por pergunta</span>
+        <div class="seg" data-group="time">
+          <button data-v="20">20 s</button>
+          <button data-v="30">30 s</button>
+          <button data-v="45">45 s</button>
+          <button data-v="0">Sem tempo</button>
+        </div>
+      </div>
+      <button class="btn big" id="go">Começar</button>
+      <span class="best">Atalhos: teclas <b>1</b> a <b>4</b> respondem, <b>Enter</b> vai para a próxima.</span>
+    </div>
+  </section>
+
+  <!-- JOGO -->
+  <section id="screen-game" hidden>
+    <div class="wrap" style="padding:0">
+      <div class="hud">
+        <div class="hud-left">
+          <span class="pill" id="qnum">1 / 20</span>
+          <span class="pill" id="qtopic">CI/CD</span>
+        </div>
+        <div class="hud-right">
+          <span class="pill" id="rank">1º lugar</span>
+          <span class="pill streak" id="streak" data-on="false">Sequência 0</span>
+          <span class="pill score" id="score">0</span>
+          <span class="pill timer" id="timer">30</span>
+        </div>
+      </div>
+      <div class="bar" id="bar"><div id="barfill"></div></div>
+
+      <div class="qcard">
+        <span class="label" id="qkind">Escolha uma</span>
+        <h2 id="qtext"></h2>
+      </div>
+
+      <div class="powers" aria-label="Power-ups (um de cada por partida)">
+        <button class="power" id="p-half"><b>50/50</b> elimina duas</button>
+        <button class="power" id="p-time"><b>+10 s</b> mais tempo</button>
+        <button class="power" id="p-dbl"><b>2x</b> pontos em dobro</button>
+      </div>
+
+      <div class="tiles" id="tiles"></div>
+
+      <div class="feedback" id="feedback" hidden>
+        <div class="fb-text">
+          <div class="meta"><h3 id="fb-title"></h3><span class="pts" id="fb-pts"></span></div>
+          <p id="fb-expl"></p>
+        </div>
+        <button class="btn" id="next">Próxima</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTADO -->
+  <section id="screen-end" class="end" hidden>
+    <div class="box">
+      <span class="label">Pontuação final</span>
+      <div class="final-score" id="end-score">0</div>
+      <p class="verdict" id="end-verdict"></p>
+      <div class="stats" id="end-stats"></div>
+      <div id="end-topics" class="topicbar"></div>
+      <div class="actions">
+        <button class="btn" id="again">Jogar de novo</button>
+        <button class="btn ghost" id="retry-wrong">Refazer só as erradas</button>
+        <button class="btn ghost" id="home">Mudar opções</button>
+      </div>
+    </div>
+    <div class="box">
+      <span class="label">Ranking da sala</span>
+      <ol class="board" id="end-board"></ol>
+    </div>
+    <div class="box review" id="review-box">
+      <span class="label" id="review-title">Revisão</span>
+      <ol id="review"></ol>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ================= PERGUNTAS =================
+   t: assunto (ci | k8s) · q: enunciado · o: opções · a: índice da correta (padrão 0)
+   tf: verdadeiro/falso (ordem fixa) · e: explicação                                  */
+const Q = [
+  // ---------- CI/CD ----------
+  {t:'ci', q:'O que é Integração Contínua (CI)?',
+   o:['Integrar o código na branch principal com frequência, com build e testes automáticos a cada mudança','Fazer deploy em produção automaticamente a cada commit','Manter cada desenvolvedor numa branch longa até o fim da sprint','Testar o sistema manualmente antes de cada release'],
+   e:'CI é integrar cedo e com frequência. Cada push dispara build e testes, então uma quebra aparece em minutos, não semanas depois.'},
+  {t:'ci', q:'Qual a diferença entre Continuous Delivery e Continuous Deployment?',
+   o:['Na Delivery a ida para produção depende de uma aprovação manual; no Deployment ela é automática','São sinônimos, não há diferença','Delivery é só para apps mobile e Deployment para web','No Deployment não existem testes automatizados'],
+   e:'Delivery: todo build aprovado fica pronto para produção, mas alguém decide quando liberar. Deployment: passou no pipeline, vai para produção sozinho.'},
+  {t:'ci', tf:true, q:'Em Continuous Delivery, todo commit vai obrigatoriamente para produção sem nenhuma intervenção humana.',
+   o:['Verdadeiro','Falso'], a:1,
+   e:'Isso descreve Continuous Deployment. Na Continuous Delivery o software está sempre pronto para ir, mas a liberação pode ter aprovação manual.'},
+  {t:'ci', q:'No GitHub Actions, em qual pasta ficam os arquivos de workflow?',
+   o:['`.github/workflows/`','`.github/actions/`','`.ci/pipelines/`','`workflows/` na raiz do repositório'],
+   e:'Qualquer arquivo `.yml` ou `.yaml` em `.github/workflows/` é lido automaticamente pelo GitHub.'},
+  {t:'ci', q:'Qual arquivo define o pipeline no GitLab CI?',
+   o:['`.gitlab-ci.yml`','`Jenkinsfile`','`pipeline.yaml`','`.gitlab/config.json`'],
+   e:'O GitLab procura `.gitlab-ci.yml` na raiz do repositório. Nele ficam stages, jobs e scripts.'},
+  {t:'ci', q:'No Jenkins, o pipeline como código fica normalmente em qual arquivo?',
+   o:['`Jenkinsfile`','`jenkins.yml`','`build.gradle`','`pipeline.json`'],
+   e:'O `Jenkinsfile` (sintaxe declarativa ou scripted, em Groovy) fica versionado junto com o código.'},
+  {t:'ci', q:'No GitHub Actions, qual chave define os eventos que disparam o workflow (push, pull_request...)?',
+   o:['`on`','`trigger`','`when`','`events`'],
+   e:'Exemplo: `on: [push, pull_request]`. Também dá para filtrar por branch, caminho ou agendar com `schedule`.'},
+  {t:'ci', q:'No GitHub Actions, o que a chave `runs-on` define?',
+   o:['A máquina (runner) onde o job vai rodar, ex.: `ubuntu-latest`','O evento que dispara o workflow','O nome do repositório','A versão do Node.js usada'],
+   e:'`runs-on` escolhe o runner: hospedado pelo GitHub (`ubuntu-latest`, `windows-latest`) ou self-hosted.'},
+  {t:'ci', q:'No GitHub Actions, qual chave faz um job esperar outro terminar antes de começar?',
+   o:['`needs`','`depends_on`','`after`','`wait-for`'],
+   e:'Sem `needs`, os jobs rodam em paralelo. Com `needs: build`, o job só começa quando `build` termina com sucesso.'},
+  {t:'ci', q:'O que é um artefato em um pipeline?',
+   o:['O resultado do build (binário, pacote, imagem) guardado para as próximas etapas ou para o deploy','Um erro que aparece no log','O arquivo de configuração do runner','Um comentário no pull request'],
+   e:'A ideia é "build uma vez, faça deploy muitas vezes": o mesmo artefato passa por teste, staging e produção.'},
+  {t:'ci', q:'O que é um runner (ou agent) em CI?',
+   o:['A máquina ou processo que executa os jobs do pipeline','O desenvolvedor que abriu o pull request','Um tipo de teste de performance','O registry de imagens'],
+   e:'GitHub e GitLab chamam de runner; Jenkins chama de agent (antigamente slave/node).'},
+  {t:'ci', q:'Qual a ordem típica das etapas de um pipeline?',
+   o:['Build → Testes → Publicar imagem/artefato → Deploy','Deploy → Testes → Build','Testes → Deploy → Build','Publicar → Build → Deploy'],
+   e:'Primeiro compila, depois valida, depois empacota e publica, e só então faz o deploy.'},
+  {t:'ci', q:'Na pirâmide de testes, qual tipo deve existir em MAIOR quantidade?',
+   o:['Testes unitários','Testes end-to-end (E2E)','Testes manuais exploratórios','Testes de carga'],
+   e:'Unitários são rápidos e baratos e ficam na base. E2E são lentos e frágeis, ficam no topo e em menor número.'},
+  {t:'ci', q:'Shift-left em DevOps significa:',
+   o:['Trazer testes e segurança para as etapas mais cedo do desenvolvimento','Mover o deploy para o fim do projeto','Deixar todos os testes para o time de QA no final','Fazer deploy só às segundas-feiras'],
+   e:'Quanto mais cedo um bug ou falha de segurança é achado, mais barato é corrigir.'},
+  {t:'ci', q:'O build da branch principal quebrou. Qual a postura recomendada em CI?',
+   o:['Prioridade máxima: corrigir ou reverter logo, antes de subir novas features','Ignorar e continuar subindo código','Esperar a próxima sprint para olhar','Desativar os testes que falharam'],
+   e:'Build vermelho na main bloqueia todo mundo. A regra é "pare a linha" e conserte ou reverta.'},
+  {t:'ci', q:'Trunk-based development é uma prática em que:',
+   o:['Todos integram na branch principal com frequência, usando branches de vida curta','Cada feature fica meses numa branch própria','Só o tech lead pode fazer commit','O time não usa controle de versão'],
+   e:'Branches curtas (horas ou poucos dias) evitam merges enormes e conflitos. Combina com feature flags.'},
+  {t:'ci', q:'Feature flags servem para:',
+   o:['Ligar ou desligar uma funcionalidade em produção sem fazer um novo deploy','Marcar commits que têm bugs','Bloquear merges na branch principal','Definir a tag da imagem Docker'],
+   e:'Permitem subir código ainda incompleto desligado e liberar aos poucos, separando deploy de release.'},
+  {t:'ci', q:'Blue-green deployment consiste em:',
+   o:['Manter dois ambientes idênticos e trocar o tráfego do antigo (blue) para o novo (green) de uma vez','Liberar a versão nova para 5% dos usuários','Atualizar os servidores um por um','Fazer deploy só em horário comercial'],
+   e:'O rollback é rápido: basta apontar o tráfego de volta para o ambiente antigo, que continua de pé.'},
+  {t:'ci', q:'Liberar a versão nova para uma pequena parte dos usuários e ir aumentando enquanto monitora é chamado de:',
+   o:['Canary release','Blue-green deployment','Big bang release','Hotfix'],
+   e:'O nome vem do canário nas minas de carvão: um grupo pequeno sente o problema antes de todo mundo.'},
+  {t:'ci', q:'Rolling update significa:',
+   o:['Substituir as instâncias antigas pelas novas aos poucos, sem derrubar tudo de uma vez','Recriar todas as instâncias ao mesmo tempo','Voltar para a versão anterior','Rodar os testes em paralelo'],
+   e:'É a estratégia padrão do Deployment no Kubernetes, controlada por `maxSurge` e `maxUnavailable`.'},
+  {t:'ci', q:'Onde guardar a senha do banco que o pipeline precisa usar?',
+   o:['Nos secrets do sistema de CI (ou num cofre como o Vault), injetados como variável','Direto no YAML do workflow','No README do projeto','Num comentário dentro do código'],
+   e:'Nada de senha no repositório. Secrets do CI ficam criptografados e aparecem mascarados nos logs.'},
+  {t:'ci', q:'Para que serve o cache de dependências no pipeline?',
+   o:['Reaproveitar pacotes já baixados entre execuções e deixar o pipeline mais rápido','Guardar senhas e tokens','Evitar que os testes rodem','Armazenar os logs de produção'],
+   e:'Ex.: cachear `node_modules` ou `~/.m2` com uma chave baseada no hash do arquivo de lock.'},
+  {t:'ci', q:'SAST, quando aparece no pipeline, é:',
+   o:['Análise estática de segurança do código-fonte, sem executar a aplicação','Um teste de carga','Um teste de interface gráfica','Um tipo de deploy automático'],
+   e:'SAST lê o código (Static). DAST testa a aplicação rodando (Dynamic). SCA verifica dependências vulneráveis.'},
+  {t:'ci', q:'Qual destas NÃO é uma das quatro métricas DORA?',
+   o:['Cobertura de testes','Frequência de deploy','Lead time para mudanças','Tempo para restaurar o serviço (MTTR)'],
+   e:'As quatro DORA: frequência de deploy, lead time de mudanças, taxa de falha de mudanças e tempo para restaurar.'},
+  {t:'ci', q:'GitOps é uma abordagem em que:',
+   o:['O Git é a fonte da verdade do estado desejado e uma ferramenta (ex.: Argo CD, Flux) sincroniza o cluster com ele','O deploy é feito com `kubectl` direto da máquina do desenvolvedor','O Git substitui o Docker','Os testes rodam dentro do servidor Git'],
+   e:'Mudou o YAML no repositório, o operador do GitOps aplica no cluster. Rollback vira um `git revert`.'},
+  {t:'ci', q:'Terraform é um exemplo de ferramenta de:',
+   o:['Infraestrutura como Código (IaC)','Orquestração de contêineres','Monitoramento de logs','Teste unitário'],
+   e:'Com IaC a infraestrutura é descrita em arquivos versionados e pode passar pelo mesmo pipeline do código.'},
+  {t:'ci', q:'Um registry de contêiner (Docker Hub, GHCR, ECR) serve para:',
+   o:['Armazenar e distribuir imagens de contêiner','Executar os testes do pipeline','Guardar o código-fonte','Agendar Pods nos nós'],
+   e:'O pipeline faz `docker build`, depois `docker push` para o registry, e o cluster faz pull de lá.'},
+
+  // ---------- KUBERNETES ----------
+  {t:'k8s', q:'Qual é a menor unidade que o Kubernetes implanta e gerencia?',
+   o:['Pod','Contêiner','Node','Deployment'],
+   e:'Um Pod agrupa um ou mais contêineres que compartilham rede (mesmo IP) e volumes.'},
+  {t:'k8s', q:'Para que serve um Deployment?',
+   o:['Manter um número de réplicas de Pods rodando e fazer rolling updates e rollbacks','Expor Pods para a internet','Armazenar senhas','Guardar o estado do cluster'],
+   e:'Você declara o estado desejado (imagem, réplicas) e o Deployment, via ReplicaSet, faz acontecer.'},
+  {t:'k8s', q:'Qual objeto o Deployment cria por baixo dos panos para manter as réplicas?',
+   o:['ReplicaSet','StatefulSet','DaemonSet','Job'],
+   e:'Cada versão do Deployment gera um ReplicaSet novo. O rollback volta para o ReplicaSet anterior.'},
+  {t:'k8s', tf:true, q:'Se você apagar manualmente um Pod gerenciado por um Deployment, ele é recriado automaticamente.',
+   o:['Verdadeiro','Falso'], a:0,
+   e:'O ReplicaSet percebe que falta uma réplica e cria outro Pod (com outro nome) para voltar ao número desejado.'},
+  {t:'k8s', q:'O que um Service faz?',
+   o:['Dá um IP e DNS estáveis e balanceia o tráfego entre os Pods selecionados por labels','Cria novas imagens de contêiner','Escolhe em qual nó o Pod roda','Guarda configurações em chave-valor'],
+   e:'Pods morrem e mudam de IP. O Service fica fixo na frente deles.'},
+  {t:'k8s', q:'Como um Service sabe quais Pods devem receber tráfego?',
+   o:['Pelo `selector`, que casa com as labels dos Pods','Pelo nome de cada Pod','Pelo IP fixo de cada Pod','Pela ordem em que os Pods foram criados'],
+   e:'Se o selector não bate com nenhuma label, o Service fica sem endpoints. Confira com `kubectl get endpoints`.'},
+  {t:'k8s', q:'Qual é o tipo padrão de Service quando você não informa `type`?',
+   o:['ClusterIP','NodePort','LoadBalancer','ExternalName'],
+   e:'ClusterIP só é acessível de dentro do cluster.'},
+  {t:'k8s', q:'Qual tipo de Service expõe a aplicação numa porta fixa de cada nó (faixa 30000–32767)?',
+   o:['NodePort','ClusterIP','Headless','ExternalName'],
+   e:'NodePort abre a mesma porta em todos os nós. LoadBalancer pede um balanceador ao provedor de nuvem.'},
+  {t:'k8s', q:'O Ingress é usado para:',
+   o:['Rotear tráfego HTTP/HTTPS externo para Services, por host ou caminho','Guardar volumes persistentes','Escalar Pods automaticamente','Definir limites de CPU'],
+   e:'O Ingress precisa de um Ingress Controller (ex.: NGINX, Traefik) rodando no cluster para funcionar.'},
+  {t:'k8s', q:'Qual a diferença entre ConfigMap e Secret?',
+   o:['ConfigMap guarda configuração comum; Secret guarda dados sensíveis, codificados em base64','Secret é criptografado com AES por padrão e o ConfigMap foi descontinuado','ConfigMap só aceita JSON','Não existe diferença'],
+   e:'Base64 não é criptografia. Para proteger de verdade, ative encryption at rest no etcd e restrinja o acesso com RBAC.'},
+  {t:'k8s', tf:true, q:'Um dado guardado num Secret do Kubernetes já fica criptografado por padrão, só por estar num Secret.',
+   o:['Verdadeiro','Falso'], a:1,
+   e:'Por padrão o valor só está em base64, que qualquer um decodifica. A criptografia no etcd precisa ser configurada.'},
+  {t:'k8s', q:'Namespaces servem para:',
+   o:['Separar recursos do cluster logicamente (ex.: dev, staging, prod) e aplicar cotas e permissões','Dar nome aos nós','Criar redes físicas separadas','Versionar imagens'],
+   e:'Use `-n <namespace>` nos comandos. Sem ele, o `kubectl` usa o namespace `default` (ou o do contexto).'},
+  {t:'k8s', q:'Qual comando lista os Pods do namespace atual?',
+   o:['`kubectl get pods`','`kubectl list pods`','`kubectl show pods`','`kubectl pods --all`'],
+   e:'Para todos os namespaces: `kubectl get pods -A`. Com mais detalhes (IP, nó): `-o wide`.'},
+  {t:'k8s', q:'Qual comando cria ou atualiza recursos a partir de um arquivo YAML?',
+   o:['`kubectl apply -f arquivo.yaml`','`kubectl run arquivo.yaml`','`kubectl push -f arquivo.yaml`','`kubectl deploy arquivo.yaml`'],
+   e:'`apply` é declarativo: cria se não existe, atualiza se mudou. `create` falha se o recurso já existe.'},
+  {t:'k8s', q:'Um Pod não sobe. Qual comando mostra os eventos e detalhes dele?',
+   o:['`kubectl describe pod <nome>`','`kubectl get nodes`','`kubectl version`','`kubectl config view`'],
+   e:'A seção Events no fim do `describe` mostra falhas de agendamento, pull de imagem e probes.'},
+  {t:'k8s', q:'Qual comando mostra a saída (stdout) de um contêiner?',
+   o:['`kubectl logs <pod>`','`kubectl output <pod>`','`kubectl print <pod>`','`kubectl tail <pod>`'],
+   e:'`-f` acompanha em tempo real, `-c` escolhe o contêiner e `--previous` mostra a execução anterior.'},
+  {t:'k8s', q:'Como abrir um shell dentro de um Pod em execução?',
+   o:['`kubectl exec -it <pod> -- sh`','`kubectl ssh <pod>`','`kubectl attach --shell <pod>`','`kubectl login <pod>`'],
+   e:'`-i` mantém a entrada aberta, `-t` cria um terminal, e o que vem depois de `--` é o comando executado.'},
+  {t:'k8s', q:'Qual comando escala um Deployment para 5 réplicas?',
+   o:['`kubectl scale deployment <nome> --replicas=5`','`kubectl resize deployment <nome> 5`','`kubectl replicas <nome> 5`','`kubectl set size=5 <nome>`'],
+   e:'Também dá para mudar `replicas: 5` no YAML e rodar `kubectl apply`.'},
+  {t:'k8s', q:'Qual comando volta um Deployment para a versão anterior?',
+   o:['`kubectl rollout undo deployment/<nome>`','`kubectl rollback <nome>`','`kubectl revert deployment <nome>`','`kubectl undo pod <nome>`'],
+   e:'`kubectl rollout status` acompanha o update e `kubectl rollout history` lista as revisões.'},
+  {t:'k8s', q:'Todo comando `kubectl` conversa primeiro com qual componente?',
+   o:['kube-apiserver','etcd diretamente','kubelet','kube-scheduler'],
+   e:'O API server é a porta de entrada do cluster: autentica, valida e grava no etcd.'},
+  {t:'k8s', q:'Qual componente do control plane guarda todo o estado do cluster?',
+   o:['etcd','kubelet','kube-proxy','CoreDNS'],
+   e:'etcd é um banco chave-valor distribuído. Perder o etcd sem backup é perder o cluster.'},
+  {t:'k8s', q:'Qual componente decide em qual nó um Pod novo vai rodar?',
+   o:['kube-scheduler','kube-apiserver','kubelet','etcd'],
+   e:'Ele olha requests de CPU e memória, taints, tolerations e afinidades para escolher o nó.'},
+  {t:'k8s', q:'O kubelet é:',
+   o:['O agente que roda em cada nó e garante que os contêineres dos Pods estejam rodando','O banco de dados do cluster','O balanceador de carga externo','A linha de comando do Kubernetes'],
+   e:'O kubelet recebe as especificações dos Pods e conversa com o runtime (containerd, CRI-O) para rodá-los.'},
+  {t:'k8s', q:'O kube-proxy é responsável por:',
+   o:['Manter as regras de rede em cada nó para que o tráfego dos Services chegue aos Pods','Baixar imagens de contêiner','Guardar os Secrets','Autenticar usuários'],
+   e:'Ele configura iptables ou IPVS para traduzir o IP do Service nos IPs dos Pods.'},
+  {t:'k8s', q:'Os nós que executam as aplicações (e não o control plane) são chamados de:',
+   o:['Worker nodes','Master pods','Etcd nodes','Ingress nodes'],
+   e:'Cada worker roda kubelet, kube-proxy e um container runtime.'},
+  {t:'k8s', q:'Qual recurso é indicado para bancos de dados, que precisam de identidade de rede e armazenamento estáveis por réplica?',
+   o:['StatefulSet','Deployment','DaemonSet','ReplicaSet'],
+   e:'StatefulSet dá nomes fixos (db-0, db-1...) e um PVC próprio para cada réplica.'},
+  {t:'k8s', q:'Você precisa de exatamente um Pod de coleta de logs em CADA nó. Qual recurso usar?',
+   o:['DaemonSet','StatefulSet','Job','HorizontalPodAutoscaler'],
+   e:'Entrou nó novo, o DaemonSet coloca o Pod nele. Usado para agentes de log, monitoramento e rede.'},
+  {t:'k8s', q:'Para rodar uma tarefa de backup todo dia às 2h, use:',
+   o:['CronJob','Job','DaemonSet','Deployment'],
+   e:'CronJob cria um Job no horário definido em formato cron, ex.: `0 2 * * *`. Job sozinho roda uma vez até terminar.'},
+  {t:'k8s', q:'Um Pod pede armazenamento persistente por meio de um:',
+   o:['PersistentVolumeClaim (PVC)','ConfigMap','Volume `emptyDir`','ServiceAccount'],
+   e:'O PVC pede espaço e o cluster liga a um PersistentVolume. Um `emptyDir` some quando o Pod é removido.'},
+  {t:'k8s', q:'Qual a diferença entre liveness probe e readiness probe?',
+   o:['Liveness falhando reinicia o contêiner; readiness falhando tira o Pod do balanceamento do Service','São a mesma coisa','Readiness falhando reinicia o nó','Liveness só roda uma vez, quando o Pod é criado'],
+   e:'Readiness diz "posso receber tráfego?". Liveness diz "ainda estou vivo?". Existe também a startup probe.'},
+  {t:'k8s', q:'O HorizontalPodAutoscaler (HPA) faz o quê?',
+   o:['Aumenta ou diminui o número de réplicas com base em métricas como uso de CPU','Aumenta a CPU de um único Pod','Adiciona nós novos ao cluster','Atualiza a imagem automaticamente'],
+   e:'Horizontal = mais Pods. Vertical (VPA) = mais recurso por Pod. Mais nós é o Cluster Autoscaler.'},
+  {t:'k8s', q:'Em `resources`, o que `requests` representa?',
+   o:['O mínimo reservado, usado pelo scheduler para escolher um nó com espaço','O máximo que o contêiner pode usar','O número de requisições HTTP por segundo','O número de réplicas'],
+   e:'`requests` é a reserva (usada para agendar). `limits` é o teto.'},
+  {t:'k8s', q:'Um contêiner foi encerrado com o motivo `OOMKilled`. O que aconteceu?',
+   o:['Ele passou do limite de memória (`limits.memory`)','Ele passou do limite de CPU','A liveness probe falhou','O nó foi desligado'],
+   e:'Passar do limite de CPU só causa lentidão (throttling). Passar do limite de memória mata o contêiner.'},
+  {t:'k8s', q:'O status `CrashLoopBackOff` indica que:',
+   o:['O contêiner inicia, falha, e o Kubernetes fica tentando reiniciar com espera crescente','A imagem não foi encontrada','O Pod está esperando um nó livre','Está tudo saudável'],
+   e:'Use `kubectl logs <pod> --previous` para ver o log da execução que caiu.'},
+  {t:'k8s', q:'O status `ImagePullBackOff` geralmente significa:',
+   o:['O nó não conseguiu baixar a imagem (nome ou tag errados, ou falta credencial do registry)','A aplicação travou por falta de memória','O Service está sem endpoints','O HPA chegou ao máximo de réplicas'],
+   e:'Confira o nome e a tag da imagem e, se o registry for privado, o `imagePullSecrets`.'},
+  {t:'k8s', q:'Helm é:',
+   o:['Um gerenciador de pacotes do Kubernetes que instala aplicações por meio de charts','Um runtime de contêiner','Um tipo de Service','O painel web oficial do cluster'],
+   e:'Um chart é um conjunto de templates YAML com valores configuráveis. Ex.: `helm install minha-app ./chart`.'},
+  {t:'k8s', q:'Qual `apiVersion` se usa num Deployment?',
+   o:['`apps/v1`','`v1`','`batch/v1`','`networking.k8s.io/v1`'],
+   e:'Pod, Service e ConfigMap usam `v1`. Job e CronJob, `batch/v1`. Ingress, `networking.k8s.io/v1`.'}
+];
+
+/* ================= JOGO ================= */
+const TOPIC = {ci:'CI/CD', k8s:'Kubernetes'};
+const BOTS = [{n:'Bia', s:.80}, {n:'Rafa', s:.68}, {n:'Duda', s:.74}, {n:'Léo', s:.58}];
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+const cfg = Object.assign({topic:'mix', count:20, time:30, name:''}, store.get('quizcfg', {}));
+let S = null;
+
+function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(s){ return esc(s).replace(/`([^`]+)`/g, '<code>$1</code>'); }
+function show(name){ ['start','game','end'].forEach(n => $('screen-' + n).hidden = n !== name); window.scrollTo(0, 0); }
+function fmtN(n){ return n.toLocaleString('pt-BR'); }
+function ord(n){ return n + 'º'; }
+
+/* ----- tela inicial ----- */
+function refreshStart(){
+  document.querySelectorAll('[data-group]').forEach(g => {
+    const key = g.dataset.group;
+    g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(cfg[key]))));
+  });
+  const n = {mix: Q.length, ci: Q.filter(q => q.t === 'ci').length, k8s: Q.filter(q => q.t === 'k8s').length};
+  $('n-mix').textContent = '(' + n.mix + ')'; $('n-ci').textContent = '(' + n.ci + ')'; $('n-k8s').textContent = '(' + n.k8s + ')';
+  $('facts').innerHTML = [n.ci + ' perguntas de CI/CD', n.k8s + ' de Kubernetes', 'Explicação em cada resposta', '3 power-ups por partida']
+    .map(t => '<span>' + t + '</span>').join('');
+  const best = store.get('quizbest', null);
+  $('best').innerHTML = best ? 'Seu recorde: <b>' + fmtN(best.score) + '</b> pontos, ' + best.pct + '% de acerto' : '';
+}
+document.querySelectorAll('[data-group]').forEach(g => {
+  g.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const v = b.dataset.v; cfg[g.dataset.group] = isNaN(+v) ? v : +v;
+    store.set('quizcfg', cfg); refreshStart();
+  });
+});
+$('name').value = cfg.name || '';
+$('go').onclick = () => startGame();
+
+/* ----- partida ----- */
+function prep(q){
+  const a = q.a || 0;
+  const opts = q.o.map((t, i) => ({t, ok: i === a}));
+  return Object.assign({}, q, {src: q, opts: q.tf ? opts : shuffle(opts)});
+}
+function startGame(pool){
+  cfg.name = $('name').value.trim(); store.set('quizcfg', cfg);
+  let qs = pool ? shuffle(pool) : shuffle(Q.filter(q => cfg.topic === 'mix' || q.t === cfg.topic));
+  if (!pool && cfg.count) qs = qs.slice(0, cfg.count);
+  S = {
+    qs: qs.map(prep), i: 0, score: 0, streak: 0, bestStreak: 0, correct: 0, answers: [],
+    power: {half: true, time: true, dbl: true}, bots: BOTS.map(b => ({n: b.n, s: b.s, score: 0})), tid: null
+  };
+  show('game'); render();
+}
+function me(){ return cfg.name || 'Você'; }
+function ranking(){
+  const list = [{n: me(), score: S.score, me: true}].concat(S.bots.map(b => ({n: b.n, score: b.score, bot: true})));
+  return list.sort((a, b) => b.score - a.score || (a.me ? -1 : b.me ? 1 : 0));
+}
+function render(){
+  const q = S.qs[S.i];
+  S.locked = false; S.dbl = false; S.extra = 0;
+  $('qnum').textContent = (S.i + 1) + ' / ' + S.qs.length;
+  $('qtopic').textContent = TOPIC[q.t];
+  $('qkind').textContent = q.tf ? 'Verdadeiro ou falso' : 'Escolha uma';
+  $('qtext').innerHTML = fmt(q.q);
+  $('tiles').innerHTML = q.opts.map((o, k) =>
+    '<button class="tile c' + (q.tf ? (k ? 4 : 2) : k + 1) + '" data-k="' + k + '"><span class="key">' + (k + 1) + '</span><span>' + fmt(o.t) + '</span></button>'
+  ).join('');
+  $('feedback').hidden = true;
+  updatePowers(); updateHud(); startTimer();
+}
+function updatePowers(){
+  const q = S.qs[S.i];
+  $('p-half').disabled = !S.power.half || S.locked || q.opts.length < 4;
+  $('p-time').disabled = !S.power.time || S.locked || !cfg.time;
+  $('p-dbl').disabled = !S.power.dbl || S.locked;
+  $('p-dbl').classList.toggle('active', S.dbl);
+}
+function updateHud(){
+  $('score').textContent = fmtN(S.score);
+  $('streak').textContent = 'Sequência ' + S.streak;
+  $('streak').dataset.on = String(S.streak >= 2);
+  const pos = ranking().findIndex(p => p.me) + 1;
+  $('rank').textContent = ord(pos) + ' lugar';
+}
+
+/* ----- tempo ----- */
+function startTimer(){
+  clearInterval(S.tid);
+  S.t0 = performance.now();
+  const timed = !!cfg.time;
+  $('timer').hidden = !timed; $('bar').hidden = !timed;
+  if (!timed) return;
+  S.tid = setInterval(tick, 100); tick();
+}
+function remaining(){ return Math.max(0, cfg.time + S.extra - (performance.now() - S.t0) / 1000); }
+function tick(){
+  const r = remaining(), total = cfg.time + S.extra;
+  $('barfill').style.width = (100 * r / total) + '%';
+  $('timer').textContent = Math.ceil(r);
+  const low = r <= 5;
+  $('timer').classList.toggle('low', low); $('bar').classList.toggle('low', low);
+  if (r <= 0) answer(-1);
+}
+
+/* ----- power-ups ----- */
+$('p-half').onclick = () => {
+  if (S.locked || !S.power.half) return; S.power.half = false;
+  const wrong = shuffle(S.qs[S.i].opts.map((o, k) => o.ok ? -1 : k).filter(k => k >= 0)).slice(0, 2);
+  wrong.forEach(k => { const t = $('tiles').children[k]; t.disabled = true; t.classList.add('gone'); });
+  updatePowers();
+};
+$('p-time').onclick = () => { if (S.locked || !S.power.time) return; S.power.time = false; S.extra += 10; tick(); updatePowers(); };
+$('p-dbl').onclick = () => { if (S.locked || !S.power.dbl) return; S.power.dbl = false; S.dbl = true; updatePowers(); };
+
+/* ----- resposta ----- */
+$('tiles').addEventListener('click', e => {
+  const b = e.target.closest('.tile'); if (!b || b.disabled) return;
+  answer(+b.dataset.k);
+});
+function answer(k){
+  if (S.locked) return;
+  S.locked = true; clearInterval(S.tid);
+  const q = S.qs[S.i];
+  const elapsed = (performance.now() - S.t0) / 1000;
+  const ok = k >= 0 && q.opts[k].ok;
+  let pts = 0, base = 0, bonus = 0;
+  if (ok){
+    S.correct++; S.streak++; S.bestStreak = Math.max(S.bestStreak, S.streak);
+    base = cfg.time ? 500 + Math.round(500 * Math.min(1, remaining() / cfg.time)) : 800;
+    bonus = S.streak >= 2 ? Math.min(S.streak - 1, 5) * 100 : 0;
+    pts = (base + bonus) * (S.dbl ? 2 : 1);
+    S.score += pts;
+  } else S.streak = 0;
+  S.answers.push({q, pick: k, ok, pts, time: elapsed});
+  S.bots.forEach(b => { if (Math.random() < b.s) b.score += 550 + Math.round(Math.random() * 450) + (Math.random() < .5 ? 100 : 0); });
+
+  [...$('tiles').children].forEach((t, i) => {
+    t.disabled = true;
+    if (q.opts[i].ok){ t.classList.add('right'); t.insertAdjacentHTML('beforeend', '<span class="tag">Correta</span>'); }
+    else if (i === k){ t.classList.add('wrong'); t.insertAdjacentHTML('beforeend', '<span class="tag">Sua resposta</span>'); }
+    else t.classList.add('dim');
+  });
+
+  const title = $('fb-title');
+  title.className = ok ? 'ok' : 'no';
+  title.textContent = ok ? 'Correto!' : (k < 0 ? 'Tempo esgotado' : 'Não foi dessa vez');
+  let ptsTxt = '';
+  if (ok){
+    ptsTxt = '+' + fmtN(pts);
+    const extras = [];
+    if (bonus) extras.push('sequência +' + bonus);
+    if (S.dbl) extras.push('2x');
+    if (extras.length) ptsTxt += ' (' + extras.join(', ') + ')';
+  }
+  $('fb-pts').textContent = ptsTxt;
+  const right = q.opts.find(o => o.ok).t;
+  $('fb-expl').innerHTML = (ok ? '' : 'Resposta certa: <strong>' + fmt(right) + '</strong>. ') + fmt(q.e || '');
+  $('next').textContent = S.i + 1 < S.qs.length ? 'Próxima' : 'Ver resultado';
+  $('feedback').hidden = false;
+  updatePowers(); updateHud();
+  $('next').focus({preventScroll: true});
+  $('feedback').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+$('next').onclick = () => { S.i++; if (S.i < S.qs.length) { render(); window.scrollTo({top: 0}); } else finish(); };
+
+/* ----- resultado ----- */
+function finish(){
+  clearInterval(S.tid);
+  const total = S.qs.length, pct = Math.round(100 * S.correct / total);
+  const board = ranking(), pos = board.findIndex(p => p.me) + 1;
+  const okTimes = S.answers.filter(a => a.ok).map(a => a.time);
+  const avg = okTimes.length ? (okTimes.reduce((x, y) => x + y, 0) / okTimes.length) : 0;
+
+  const best = store.get('quizbest', null);
+  const record = !best || S.score > best.score;
+  if (record) store.set('quizbest', {score: S.score, pct});
+
+  $('end-score').textContent = fmtN(S.score);
+  const msg = pct >= 90 ? 'Pronto para a prova.' : pct >= 70 ? 'Bom resultado. Revise as erradas abaixo e jogue de novo.' : pct >= 50 ? 'Na média. Vale refazer só as erradas até fixar.' : 'Ainda falta base. Leia as explicações da revisão e tente de novo.';
+  $('end-verdict').textContent = ord(pos) + ' lugar de ' + board.length + '. ' + msg + (record ? ' Novo recorde!' : '');
+  $('end-stats').innerHTML = [
+    ['Acertos', S.correct + ' / ' + total], ['Precisão', pct + '%'],
+    ['Melhor sequência', S.bestStreak], ['Tempo médio no acerto', avg ? avg.toFixed(1).replace('.', ',') + ' s' : '–']
+  ].map(([l, v]) => '<div class="stat"><span class="label">' + l + '</span><b>' + v + '</b></div>').join('');
+
+  const topics = [...new Set(S.qs.map(q => q.t))];
+  $('end-topics').innerHTML = topics.map(t => {
+    const a = S.answers.filter(x => x.q.t === t), c = a.filter(x => x.ok).length, p = Math.round(100 * c / a.length);
+    return '<div class="row"><span>' + TOPIC[t] + '</span><span>' + c + '/' + a.length + ' · ' + p + '%</span></div><div class="bar"><div style="width:' + p + '%;background:' + (p >= 70 ? 'var(--good)' : p >= 50 ? 'var(--warn)' : 'var(--bad)') + '"></div></div>';
+  }).join('');
+
+  $('end-board').innerHTML = board.map((p, i) =>
+    '<li class="' + (p.me ? 'me' : '') + '"><span class="pos">' + ord(i + 1) + '</span><span>' + esc(p.n) + (p.bot ? '<span class="bot">bot</span>' : '') + '</span><span>' + fmtN(p.score) + '</span></li>'
+  ).join('');
+
+  const wrong = S.answers.filter(a => !a.ok);
+  $('retry-wrong').hidden = !wrong.length;
+  $('review-title').textContent = wrong.length ? 'Revisão: ' + wrong.length + (wrong.length > 1 ? ' perguntas erradas' : ' pergunta errada') : 'Revisão';
+  $('review').innerHTML = wrong.length ? wrong.map(a => {
+    const right = a.q.opts.find(o => o.ok).t;
+    const yours = a.pick < 0 ? 'sem resposta (tempo esgotado)' : fmt(a.q.opts[a.pick].t);
+    return '<li><span class="label">' + TOPIC[a.q.t] + '</span><span class="q">' + fmt(a.q.q) + '</span>' +
+      '<span class="ans"><span class="x">Você:</span> ' + yours + '</span>' +
+      '<span class="ans"><span class="v">Certa:</span> ' + fmt(right) + '</span>' +
+      '<span class="why">' + fmt(a.q.e || '') + '</span></li>';
+  }).join('') : '<li><span class="q">Você acertou tudo. Nada para revisar.</span></li>';
+
+  S.wrongPool = wrong.map(a => a.q.src);
+  show('end');
+}
+$('again').onclick = () => startGame();
+$('retry-wrong').onclick = () => startGame(S.wrongPool);
+$('home').onclick = () => { refreshStart(); show('start'); };
+
+/* ----- teclado ----- */
+document.addEventListener('keydown', e => {
+  if ($('screen-game').hidden || !S) return;
+  if (!S.locked && /^[1-4]$/.test(e.key)){
+    const t = $('tiles').children[+e.key - 1];
+    if (t && !t.disabled){ e.preventDefault(); answer(+e.key - 1); }
+  } else if (S.locked && e.key === 'Enter' && e.target.tagName !== 'BUTTON'){
+    e.preventDefault(); $('next').click();
+  }
+});
+
+refreshStart();
+</script>
+</body>
+</html>
