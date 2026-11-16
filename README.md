@@ -14,7 +14,8 @@ Quiz de treino de **CI/CD** e **Kubernetes** para estudar para a prova, no estil
 - **Resultado** com precisão por assunto, melhor sequência, tempo médio e revisão de todas as perguntas erradas.
 - **Refazer só as erradas**, para fixar o que faltou.
 - **Atalhos**: teclas `1` a `4` respondem e `Enter` vai para a próxima.
-- O recorde e as últimas opções ficam salvos no navegador.
+- **Quatro temas** no visual do portal Tech 2D: Padrão, Rosa claro, Roxo claro e Escuro (o Escuro é o padrão quando o sistema está no modo escuro).
+- O recorde, o tema e as últimas opções ficam salvos no navegador.
 
 ## Assuntos cobertos
 
@@ -37,7 +38,7 @@ As perguntas ficam no array `Q` dentro do `<script>` do `index.html`:
 ```
 
 - `t`: assunto, `ci` ou `k8s`.
-- `o`: a primeira opção é a correta (as opções são embaralhadas no jogo).
+- `o`: a primeira opção é a correta (as opções são embaralhadas no jogo). Escreva as erradas com tamanho parecido com a certa e use confusões reais (ex.: canary × blue-green), para a resposta não se entregar pelo tamanho.
 - Para verdadeiro ou falso, use `tf:true`, `o:['Verdadeiro','Falso']` e `a` com o índice da correta.
 - Texto entre crases vira código, ex.: `` `kubectl get pods` ``.
 
